@@ -54,4 +54,4 @@ Tras evaluar las métricas de rendimiento en los conjuntos de entrenamiento (Tra
 4. Ejecuta el código paso a paso para reproducir la limpieza de datos y el entrenamiento de los modelos.
 
 ---
-*Trabajo realizado por: Marcos Martínez, Laura López, Marina Parra, Verónica Yebra y Rodrigo Castillo.
+*Trabajo realizado por: Marcos Martínez, Laura López, Marina Parra, Verónica Yebra y Rodrigo Castillo.*
