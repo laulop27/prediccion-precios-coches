@@ -1,0 +1,943 @@
+---
+title: "TRABAJO GRUPAL"
+author: ""
+format:
+  pdf: default
+  
+  html:
+    theme: [style.scss]
+    css: estilo.css
+    embed-resources: true
+    toc: true
+    toc-depth: 5
+    toc-title: "Contenido"
+    toc-location: left
+editor: visual
+---
+
+## FASE 1: DEPURACIÓN DE LA BASE DE DATOS
+
+### 1. ANÁLISIS EXPLORATORIO INICIAL
+
+#### CODIFICACIÓN DE VARIABLES
+
+```{r}
+library(tidyverse)
+datos <- read.csv("car_price.csv", stringsAsFactors = TRUE)
+```
+
+```{r}
+head(datos)
+```
+
+##### CODIFICACIÓN DE VARIABLES CUALITATIVAS
+
+Vamos analizar el número de categorías de las variables cualitativas ya que si estas cuentan con muchas categorías, lo ideal será agruparlas para contar con un menor número de categorías y trabajar con menos parámetros y modelos más sencillos. 
+
+```{r}
+str(datos)
+```
+Podemos comprobar que las variables **make** y **registered_city** cuentan con 27 y 243 categorías respectivamente por lo que las reagreuparemos. También contamos con una variable fecha "**ad_created_on**" a la que realizaremos un tratamiento diferente más adelante. 
+
+-   **VARIABLE MAKE**
+```{r}
+table(datos$make)
+```
+Vemos que la variable **make** que corresponde con la marca del vehículo tiene 27 categorías, por lo que vamos a reagrupar la variable para tratar de reducir el número de categorías y el número de parámetros que generaría esta variable. Realizaremos la reagrupación en función de la casa del motor del coche.
+
+```{r}
+# Lista de coches
+coches <- c("maruti", "hyundai", "renault", "honda", "ford", "nissan", 
+            "toyota", "audi", "tata", "datsun", "mahindra", "volkswagen", 
+            "mitsubishi", "mercedes benz", "chevrolet", "kia", "bmw", 
+            "skoda", "volvo", "fiat", "mg", "mahindra renault", 
+            "isuzu", "ssangyong", "jeep", "opel", "jaguar")
+
+# Definir las casas
+casas_motor <- list(
+  Stellantis = c("fiat", "opel", "jeep"),
+  Volkswagen_Group = c("audi", "skoda", "volkswagen"),
+  GM = c("chevrolet"),
+  Ford = c("ford"),
+  Renault_Group = c("renault", "mahindra renault"),
+  Nissan_Alliance = c("nissan", "datsun", "mitsubishi"),
+  Hyundai_Group = c("hyundai", "kia"),
+  Toyota_Group = c("toyota"),
+  Honda_Group = c("honda"),
+  Tata_Motors = c("tata", "jaguar"),
+  BMW_Group = c("bmw"),
+  Daimler = c("mercedes benz"),
+  Geely_Group = c("volvo"),
+  Otros = c("maruti", "mahindra", "mg", "isuzu", "ssangyong")
+)
+
+# Crear un data.frame con la asignación
+library(dplyr)
+
+df <- enframe(coches, name = "id", value = "make") %>%
+  rowwise() %>%
+  mutate(casa = names(Filter(function(x) make %in% x, casas_motor))[1] %||% "Desconocido")
+
+df <- df |> select(-id)
+
+#añadimos la columna  casa a la base de datos 
+datos <- left_join(datos, df, by = "make")
+
+```
+
+```{r}
+datos <- datos |> select(-make)
+
+table(datos$casa)
+```
+Hemos conseguido pasar de 27 a 14 categorías. 
+
+-   **VARIABLE register_city**
+```{r}
+datos <- datos |>
+  mutate(registered_city = str_to_lower(str_trim(registered_city)))
+
+# Listas construidas según su ubicación geográfica real
+norte <- c("delhi", "new delhi", "delhi west", "gurgaon", "noida",
+           "faridabad", "ghaziabad", "meerut", "sonipat", "sonepat",
+           "rohtak", "panipat", "hisar", "ambala", "karnal", "jhajjar",
+           "bahadurgarh", "panchkula", "yamunanagar", "kaithal",
+           "chandigarh", "haridwar", "dehardun", "saharanpur")
+
+sur <- c("bengaluru", "bangalore south", "bangalore central",
+         "bangalore k r puram", "bangaloresouth", "mysore",
+         "chikmagalur", "chickballapur", "mangalore", "udupi",
+         "tumkur", "belgaum", "ullal", "dharwad", "madikeri",
+         "karwar", "hosur", "tirunelveli", "madurai", "trichy",
+         "salem", "tiruppur")
+
+este <- c("kolkata", "kolkatta south", "howrah", "balurghat",
+          "kharagpur", "ranchi", "gorakhpur", "allahabad",
+          "faizabad", "gonda", "bahraich")
+
+oeste <- c("mumbai west", "navi mumbai", "surat", "ahmedabad",
+           "ahmedabad east", "gandhinagar", "gandhi nagar",
+           "vadodara", "jamnagar", "valsad", "rajkot", "bhuj",
+           "nadiad", "bharuch", "patan", "mehsana", "mahesana",
+           "anand", "palanpur", "bhavnagar", "veraval", "kheda")
+
+datos <- datos |> 
+  mutate(region = case_when(
+    registered_city %in% norte ~ "Norte",
+    registered_city %in% sur ~ "Sur",
+    registered_city %in% este ~ "Este",
+    registered_city %in% oeste ~ "Oeste",
+    TRUE ~ "Centro"
+  ))
+
+datos <- 
+  datos |> select(-registered_city)
+```
+
+De esta forma hemos modificado la variable registered_city a region para que en vez de 244 categorías que correspondían a la ciudad en la que estba registrado el coche tener 5 en base a las regiones de la India (Norte, Sur, Este u Oeste).
+
+MODIFICAMOS LA VARIABLE ad_created_on PARA EXTRAER EL AÑO, MES Y DÍA.
+
+```{r}
+datos <- 
+  datos |> 
+  mutate("year_anuncio" = year(ad_created_on),
+         "mes_anuncio" = month(ad_created_on),
+         "dia_anuncio" = day(ad_created_on))
+
+datos <- 
+  datos |> 
+  select(-ad_created_on)
+
+head(datos)
+```
+
+De esta forma hemos añadido 3 nuevas variables a la base de datos que son:
+
+-   **year_anuncio**: año en el que se creó el anuncio de la venta.
+-   **mes_anuncio**: mes en el que se creó el anuncio de la venta.
+-   **dia_anuncio**: dia del mes en el que se creó el anuncio de la venta.
+
+
+
+```{r}
+datos$assured_buy <- as.factor(datos$assured_buy)
+datos$is_hot <- as.factor(datos$is_hot)
+datos$fitness_certificate <- as.factor(datos$fitness_certificate)
+datos$warranty_avail <- as.factor(datos$warranty_avail)
+datos$casa <- as.factor(datos$casa)
+datos$region <- as.factor(datos$region)
+```
+
+##### CODIFICACIÓN DE VARIABLES CUANTITATIVAS
+```{r}
+summary(datos)
+```
+
+
+En la interpretación de las variables, encontramos un error en la variable objetivo (sale_price), ya que no es posible que el precio de venta final de un coche sea de 0 unidades monetarias, por ello, vamos a quitar la observación entera. Además, como en la variable original_price casi la mitad de la información son missings vamos a prescindir de ella.
+
+```{r}
+datos <- datos |> 
+  filter(sale_price > 35) |> 
+  select(-original_price)
+
+summary(datos)
+```
+
+```{r}
+str(datos)
+```
+
+```{r}
+head(datos)
+```
+
+Tras la depuración, nos hemos quedado con una base de datos resultante de 7396 observaciones y 17 variables.
+
+### 2. ANÁLISIS DE OUTLIERS
+
+##### UNIVARIANTE
+
+Para automatizar el proceso vamos a utilizar la función outliers. Para ello, seleccionamos las variables numericas porque las cualis NO tienen outliers, serían categorías raras que habríamos identificado en el paso anterior.
+
+```{r}
+library(patchwork)
+library(naniar)
+source("Funciones_Propias.R") #para usar la funcion de outliers 
+
+# Aplicar la función a múltiples variables numéricas o enteras
+numeric_integer_vars <- names(which(sapply(datos, is.numeric) | sapply(datos, is.integer)))
+
+# Aplicar la función 'outliers' a cada una de las variables numéricas
+outliers_results <- lapply(numeric_integer_vars, function(var) {
+  outliers(datos, var)  # Llamar a la función pasando el nombre de la variable
+})
+```
+
+Las variables que presentan outliers son `yr_mfr` con un 0.54% de outliers, `kms_run` con un 2.41%, `sale_price` con un 5.57%, `total_owners` con el 0.58%, `year_anuncio` con el 13.73% de outliers y `mes_anuncio` con el 15.24% de outliers.
+
+-   De estos, ¿Cuáles son extremos?
+
+```{r}
+extreme_values_kms_run <- boxplot.stats(datos$kms_run,coef=3)$out
+ext_pos <- which(datos$kms_run %in% c(extreme_values_kms_run))
+
+extreme_values_kms_run
+ext_pos
+```
+
+```{r}
+extreme_values_sale_price <- boxplot.stats(datos$sale_price,coef=3)$out
+ext_pos <- which(datos$sale_price %in% c(extreme_values_sale_price))
+
+extreme_values_sale_price
+ext_pos
+```
+
+Podemos observar que las variables **year_anuncio**, **sale_price** y **mes_anuncio** presentan una gran cantidad de outliers por lo que vamos a descartar que son atípicos y vamos a considerar que estas variables tienen una distribución rara, ya que si eliminásemos esos valores, estaríamos perjudicando bastante información de la base de datos.
+
+Por otro lado, como `yr_mfr` y `total_owners` presentan un porcetanje menor al 1% de outliers, vamos a tratarlos como atípicos y eliminarlos de la base de datos.
+
+```{r}
+datos$yr_mfr <- replace(datos$yr_mfr, datos$yr_mfr < 2006, NA)
+
+datos$total_owners <- replace(datos$total_owners, datos$total_owners > 3, NA)
+```
+
+Por ello, realizaremos el estudio bivariante solamente de la variable kms_run porque es la que presenta un porcentaje más dudoso.
+
+##### BIVARIANTE
+
+-   Variable kms_run
+
+```{r}
+gg0 <- ggplot(datos, aes(y = kms_run)) +
+  geom_boxplot(fill = "lightblue", outlier.color = "#FF34B3", outlier.shape = 16)
+
+gg1<- ggplot(datos, aes(x = transmission, 
+                        y = kms_run)) +
+  geom_boxplot(fill = "lightblue") +
+  labs(title = "kms_run según la transmission", x = "transmission", y = "kms_run") +
+  theme_minimal()
+
+gg0 +gg1
+```
+
+```{r}
+gg0 <- ggplot(datos, aes(y = kms_run)) +
+  geom_boxplot(fill = "lightblue", outlier.color = "#FF34B3", outlier.shape = 16)
+
+gg1<- ggplot(datos, aes(x = factor(yr_mfr), 
+                        y = kms_run)) +
+  geom_boxplot(fill = "lightblue") +
+  labs(title = "kms_run según la yr_mfr", x = "yr_mfr", y = "kms_run") +
+  theme_minimal() +
+  theme(
+    axis.text.x = element_text(angle = 90)
+  )
+
+gg0 +gg1
+```
+
+Al desagregarlo podemos observar que las observaciones de los coches que tienen más de 500.000 kilómetros son verdaderamente outliers si lo eran y por tanto los pasamos a NA.
+
+```{r}
+datos$kms_run <- replace(datos$kms_run, datos$kms_run > 500000, NA)
+```
+
+### 3. ANÁLISIS DE DATOS MISSINGS
+
+```{r}
+summary(datos)
+```
+
+```{r}
+library(naniar)
+n_miss(datos)
+pct_miss(datos)
+pct_complete_case(datos)
+```
+
+Hay un 0.60% de missings, lo que da lugar a un 91.4% de observaciones completas (8.6% afectadas por los missings).Dado que es un porcentaje muy bajo, vamos a eliminar las observaciones que contienen valores ausentes.
+
+```{r}
+datos <- datos[complete.cases(datos),]
+
+dim(datos)
+```
+
+```{r}
+ggplot(datos,aes(x=yr_mfr, y=sale_price)) +
+  geom_point(shape = ".") +
+  geom_smooth(method = "gam", formula = y ~ s(x, bs = "cs", k=7), se=FALSE) +
+  geom_smooth(method = "lm", se=FALSE, color = "red")
+
+ggplot(datos,aes(x=kms_run, y=sale_price)) +
+  geom_point(shape = ".") +
+  geom_smooth(method = "gam", formula = y ~ s(x, bs = "cs", k=7), se=FALSE) +
+  geom_smooth(method = "lm", se=FALSE, color = "red")
+```
+
+
+## FASE 2: MODELIZACIÓN
+
+-   LIBRERÍAS
+
+```{r}
+library(caret)
+library(car)
+library(purrr)
+library(furrr)
+library(dplyr)
+library(ggplot2)
+library(glmnet)
+# Para paralelizar
+library(doParallel)
+cluster <- makeCluster(detectCores() - 1)
+registerDoParallel(cluster)
+```
+
+### 2.1 MODELO GLM
+
+```{r}
+set.seed(12345)
+trainIndex <- createDataPartition(datos$sale_price, p=0.8, list=FALSE)
+datos_train <- datos[trainIndex,]
+datos_test <- datos[-trainIndex,]
+```
+
+```{r}
+summary(datos)
+```
+
+```{r}
+# 1. Crear el histograma SIN el eje X (xaxt = 'n')
+hist(datos$sale_price, 
+     xaxt = "n", xlab = "Precio de Venta")
+
+# 2. Dibujar el eje X manualmente
+# 'at' son los puntos donde van las marcas, 'labels' es el texto que quieres mostrar
+axis(1, 
+     at = c(0, 500000, 1000000, 1500000, 2000000, 2500000), 
+     labels = c("0", "0.5M", "1M", "1.5M", "2M", "2.5M"))
+```
+
+Como vimos gracias al summary, su media se sitúa en los 438670 mil euros. Es importante destacar que, dado que contamos con muchas observaciones, por las propiedades de los estimadores de los parámetros (son CAN por ser máximo verosímiles), [**la normalidad asintótica está asegurada, por lo que sólo sería necesario verificar la hipótesis de homocedasticidad para poder confiar el los p-valores posteriores.**]{style="text-decoration: underline; text-decoration-color: #F40BC9;"}
+
+-   [**Creamos el modelo inicial con todas las variables regresoras**:]{.hl-purple}
+
+```{r}
+modeloInicial<-lm(sale_price~., data=datos_train)
+modeloInicial$rank
+```
+
+```{r}
+summary(modeloInicial)
+```
+
+-   Comprobamos homocedasticidad de manera gráfica:
+
+```{r}
+# Para evitar visualizar patrones derivados del orden de los datos
+# los permutamos antes de representarlos
+plot(sample(modeloInicial$residuals))
+plot(sample(modeloInicial$residuals), ylim = c(-500000, 500000))
+```
+
+No se observa ningún patrón, por lo que podemos dar por buena la hipótesis y confiar en los p-valores que nos ofrezcan las funciones de este modelo.
+
+Para evaluar el modelo, es importante hacerlo tanto en la partición de entrenamiento como en la de prueba, para lo cual recurriremos a la funcion R2() de la librería caret que nos proporcionará el valor del $R^2$
+
+```{r}
+R2(predict(modeloInicial,datos_train), datos_train$sale_price)
+```
+
+```{r}
+R2(predict(modeloInicial,datos_test), datos_test$sale_price)
+```
+
+Como podemos ver, tanto en entrenamiento como en prueba el modelo alcanza un valor de $R^2$ 0.7, por lo que no parece que dicho modelo esté sobreajustado (de hecho, en prueba funciona ligeramente mejor). No obstante, a pesar de no haber sobreajuste, conviene siempre analizar si alguna variable input puede ser rechazada, por no aportar información al modelo.
+
+Es importante no olvidar que, una vez obtenido un modelo, se suele construir algún tipo de herramienta que permita ponerlo en practica para predecir el valor de la variable objetivo en nuevas observaciones y ello implica que se deba recopilar información sobre todas las variables que formen parte del modelo (con su correspondiente coste) por lo que, si la aportación de determinada variable no es importante, merecerá la pena construir el modelo sin ella para evitar así los costes derivados de recopilar y mantener la información correspondiente.
+
+Por ello, continuamos con el análisis de tipo II de las variables, para poder determinar cuáles podríamos eliminar del modelo:
+
+```{r}
+Anova(modeloInicial, type = "II")
+```
+
+Observamos que las variables no signifcativas son assured_buy (aunque está muy al límite de significancia), fitness_certificate y warranty_avail.
+
+#### Modelo con las variables significativas:
+
+```{r}
+modelo2<-lm(sale_price~.-warranty_avail-fitness_certificate-assured_buy, data=datos_train)
+R2(predict(modelo2,datos_train), datos_train$sale_price)
+```
+
+```{r}
+R2(predict(modelo2,datos_test), datos_test$sale_price)
+```
+
+```{r}
+modelo2$rank
+```
+
+```{r}
+Anova(modelo2,type = "II")
+```
+
+Ya hemos realizado el ANOVA con todas las variables que son significativas. La que mayor significancia tiene para nuestra variable objetivo es yr_mfr (F value = 1875.3782) seguida de body_type (490.1264) y transmission (338.4417).
+
+```{r}
+add1(modelo2, scope=formula(modeloInicial),test = "F")
+```
+
+Dado este análisis podemos ver que la emilinación de assured_buy no ha sido acertada por lo que la incluimos nuevamente en el modelo:
+
+```{r}
+modelo2Def <- lm(sale_price~.-warranty_avail-fitness_certificate, data=datos_train)
+R2(predict(modelo2Def,datos_train), datos_train$sale_price)
+```
+
+```{r}
+R2(predict(modelo2Def,datos_test), datos_test$sale_price)
+```
+
+```{r}
+modelo2Def$rank
+```
+
+```{r}
+summary(modelo2Def)
+```
+
+
+```{r}
+add1(modelo2Def, scope=formula(modeloInicial),test = "F")
+```
+
+
+Ya hemos realizado el ANOVA con todas las variables que son significativas. La que mayor significancia tiene para nuestra variable objetivo es yr_mfr (F value = 1875.3782) seguida de body_type (490.1264) y transmission (338.4417)
+
+#### interpretación de coeficientes:
+
+-   **yr_mfr=3.831e+04**: el parámetro es positivo, por lo que por cada año, mayor colesterol. Concretamente, un incremento de un año en el año de fabricación implica un aumento de 38.310unidades monetarias
+
+-   **fuel_typeelectric=-2.277e+05**: la categoría de referencia es *diesel.* Los coches eléctricos tiene un precio de 227.7 unidades monetarias inferior que los coches diesel.
+
+-   **kms_run=-4.704e-01**: el parámetro es negativo por lo que por cada kilómetro demás recorrido por el coche, su precio disminuye 0.47 unidades monetarias (50 céntimos aproximadamente).
+
+-   **body_typeluxury sedan=3.731e+05**: la categoría de referencia es *hatchback.* Los coches con una carrocería luxury sedan, tienen un precio de 373.10 unidades monetarias mayor que los coches con carrocería hatchback.
+
+-   **is_hotTRUE=-6.232e+04**: Si el coche es un anuncio “destacado” (alta demanda) presentan un precio 62.32 unidades monetarias inferior a los conches sin anunco destacado.
+
+-   **total_owners = -1.696e+04**: por cada dueño de más que ha tenido un coche, el precio de este disminuye 16.96 unidades monetarias.
+
+-   **car_ratinggood = 1.711e+04**: la categoría de referencia es *fair*. Los coches que han obtenido una calificación "good" tienen un precio 17.11 unidades monetarias superior al de los coches calificados como fair.
+
+-   **casaFord = -2.858e+05**: la categoría de referencia es *BMW_Group*. Los coches ford tienen un precio 285.8 unidades monetarias inferior que los BMW.
+
+-   **regionEste = -1.162e+05**: la categoria de referencia es centro. Los coches del este de la India tiene un precio 116.2 unidades monetarias inferior que los coches del centro de la India.
+
+Ahora vamos a crear un modelo con las 3 más significativas:
+
+```{r}
+modeloSencillo <- lm(sale_price ~ yr_mfr+body_type+transmission, data=datos_train)
+
+summary(modeloSencillo)
+```
+
+#### MÉTODOS AUTOMÁTICOS DE SELECCIÓN DE VARIABLES
+
+```{r}
+null<-lm(sale_price~1, data=datos_train)
+full<-lm(sale_price~., data=datos_train)
+
+modeloStepBIC<-step(null, scope=list(lower=null, upper=full), direction="both",
+                    k=log(nrow(datos_train)))
+modeloStepAIC<-step(null, scope=list(lower=null, upper=full), direction="both",
+                    k=2, trace=F)
+modeloForwBIC<-step(null, scope=list(lower=null, upper=full), direction="forward",
+                    k=log(nrow(datos_train)),trace=F)
+modeloForwAIC<-step(null, scope=list(lower=null, upper=full), direction="forward",
+                    k=2, trace=F)
+modeloBackBIC<-step(full, scope=list(lower=null, upper=full), direction="backward",
+                    k=log(nrow(datos_train)),trace=F)
+modeloBackAIC<-step(full, scope=list(lower=null, upper=full), direction="backward",
+                    k=2, trace=F)
+```
+
+```{r}
+modelos<-list(modeloStepBIC,modeloForwBIC,modeloBackBIC,modeloStepAIC,modeloForwAIC,modeloBackAIC)
+map_int(modelos,function(x) x$rank)
+```
+
+```{r}
+map(modelos,function(x) formula(x)) 
+```
+
+Tenemos 3 modelos distintos que son:
+
+-   `modeloStepBIC`:
+
+sale_price \~ body_type + yr_mfr + casa + transmission + fuel_type + region + kms_run + total_owners + dia_anuncio
+
+-   `modeloStepAIC`:
+
+sale_price \~ yr_mfr + fuel_type + kms_run + body_type + transmission + is_hot + total_owners + casa + region + year_anuncio + mes_anuncio + dia_anuncio
+
+-   `modeloBackBIC`:
+
+sale_price \~ body_type + yr_mfr + casa + transmission + fuel_type + region + kms_run + total_owners + car_rating + dia_anuncio + year_anuncio + is_hot + mes_anuncio + assured_buy + fitness_certificate
+
+#### COMPARACIÓN DE MODELOS
+
+Vamos
+
+```{r}
+modelos<-list(modeloStepBIC, modeloStepAIC, modeloBackBIC, modeloSencillo, modelo2Def) 
+
+vcrTodosModelos<-list()
+for (i in 1:length(modelos)){
+  set.seed(12345)
+  vcr<-train(formula(modelos[[i]]), data = datos_train,
+           method = "lm", 
+           trControl = trainControl(method="repeatedcv", number=5, repeats=20)
+)
+  vcrTodosModelos[[i]]<-vcr
+}
+# Modificamos el nombre de los modelos para incluir el nº de parámetros que tienen
+# El orden en el que están en "modelos" coincide con su numeración
+names(vcrTodosModelos)<-paste0("Model",1:length(modelos), "_",sapply(modelos,function(x) x$rank))
+bwplot(resamples(vcrTodosModelos),metric=c("Rsquared"))
+```
+
+```{r}
+summary(resamples(vcrTodosModelos), metric=c("Rsquared"))
+```
+
+A la hora de tomar una decicisión respecto a qué modelo es el "ganador", debemos tener en cuenta tres aspectos que son:
+
+En primer lugar, la [**capacidad predictiva**]{.hl-purple}, que en regresión lineal lo mediremos con el $R^2$. En este caso podemos observar que los 3 primeros modelos presentan valores muy similares que rondan el 70% mientras que el *model4_7* tiene una clara peor calidad predictiva. Por tanto, descartacmos este último como ganador.
+
+En segundo lugar, atendemos a la [**estabilidad**]{.hl-blue} de estos modelos. Cuanto *más cortos sean los bigotes y más estrechas sean las cajas, más estables* son los modelos, ya que esto indca que todos los resultados de las iteraciones son "similares" (hay menor dispersión entre las iteraciones). De nuevo, de los tres restante volvemos a obtener resultados muy similares en cuanto a la estabilidad.
+
+En tercer lugar, buscamos [**modelos parsimoniosos**]{.hl-red}, es decir, que sean lo más sencillos posibles para poder optar a una interpretación más clara y sencilla. En este caso, el modeloStepBIC y el modeloBackBIC son los que tienen un menor número de parámetros.
+
+Por tanto, el modelo *ganador* es `modeloStepBIC` ya que obtiene un $R^2$ ligeramente superior al modeloBackBIC y en cuanto a estabilidad y capacidad predictiva obtiene resultados muy similares al resto.
+
+Cogemos el modelo1 (StepBIC).
+
+```{r}
+R2(predict(modeloStepBIC,datos_train), datos_train$sale_price)
+```
+
+```{r}
+R2(predict(modeloStepBIC,datos_test), datos_test$sale_price)
+```
+```{r}
+modeloStepBIC$rank
+```
+```{r}
+Anova(modeloStepBIC,type = "II")
+```
+
+```{r}
+summary(modeloStepBIC)
+```
+
+#### MODELO PENALIZADO ENET
+
+```{r}
+y <- datos_train$sale_price
+x<-model.matrix(sale_price~., data=datos_train)[,-1]
+
+modeloLASSO<-glmnet(x, y, alpha = 1, family = "gaussian")
+plot(modeloLASSO, xvar="lambda", main = "LASSO")
+```
+
+```{r}
+modeloRIDGE<-glmnet(x, y, alpha = 0, family = "gaussian")
+plot(modeloRIDGE, xvar="lambda", main = "Ridge")
+```
+
+```{r}
+modeloENET<-glmnet(x, y, alpha = 0.1, family = "gaussian")
+plot(modeloENET, xvar="lambda", main = "enet")
+```
+
+
+
+### 2.2 MODELO DE ÁRBOL
+
+```{r}
+library(caret)
+library(rpart)
+library(rpart.plot)
+library(pROC)
+library(rattle)
+library(vcd)
+library(partykit)
+```
+
+```{r}
+hist(datos$sale_price)
+```
+
+```{r}
+histograma <- datos |> filter(sale_price < 2000000)
+hist(histograma$sale_price)
+```
+
+En el histograma se pude ver que la mayoría de los precios están en torno a 250000/30000,que corresponden a unos 3500 datos y la variable tiene una media de 454889 unidades monetarias, mostrada en el summary del análisis exploratorio.
+
+#### MODELO 5
+
+Vamos a crear el primer modelo de árbol, el cual va a tener un tamaño mínimo de la hoja del 5%
+
+```{r}
+set.seed(12345)
+modelo5<-rpart(sale_price~., data=datos_train, method = "anova", 
+               minbucket=ceiling(0.05*nrow(datos_train)),
+               cp=0, maxsurrogate = 0)
+sum(modelo5$frame$var == "<leaf>") 
+```
+
+```{r}
+max(rpart:::tree.depth(as.numeric(rownames(modelo5$frame)))) 
+```
+
+```{r}
+rpart.plot(modelo5, nn=TRUE, tweak=1.1, digits=3) 
+```
+
+Como resultado hemos obtenido un árbol con 10 hojas y una profundidad de 5 en el cual se puede observar que el nodo con media más baja es el 8, que se encuentra en la esquina izquierda, con un valor de 228000 y está formado por coches con carrocería hatchback o sedan y un año de fabricación inferior a 2011. El nodo con el valor más alto es el 7, dibujado con azul oscuro, con un valor de predicción de 1031522.45 unidades monetarias que corresponden al 6.5% de observaciones, que son coches con carrocería luxury sedan,luxury suv y suv.
+
+```{r}
+asRules(modelo5)
+```
+
+#### MODELO 2
+
+```{r}
+set.seed(12345)
+modelo2<-rpart(sale_price~., data=datos_train, method = "anova", 
+               minbucket=ceiling(0.02*nrow(datos_train)),
+               cp=0, maxsurrogate = 0)
+sum(modelo2$frame$var == "<leaf>")
+rpart.plot(modelo2, nn=TRUE, tweak=1.1, digits=3) 
+```
+
+#### MODELO 1
+
+```{r}
+set.seed(12345)
+modelo1<-rpart(sale_price~., data=datos_train, method = "anova", 
+               minbucket=ceiling(0.01*nrow(datos_train)),
+               cp=0, maxsurrogate = 0)
+sum(modelo1$frame$var == "<leaf>") 
+rpart.plot(modelo1, nn=TRUE, tweak=1.1, digits=3) 
+```
+
+#### MODELO 05
+
+```{r}
+set.seed(12345)
+modelo05<-rpart(sale_price~., data=datos_train, method = "anova", 
+                minbucket=ceiling(0.005*nrow(datos_train)),
+                cp=0, maxsurrogate = 0)
+sum(modelo05$frame$var == "<leaf>")
+rpart.plot(modelo05, nn=TRUE, tweak=1.1, digits=3) 
+```
+
+#### R2 en TRAIN y TEST
+
+```{r}
+modelos<-list(modelo5, modelo2, modelo1, modelo05)
+sapply(modelos, function(x) R2(predict(x,datos_train), datos_train$sale_price))
+```
+
+```{r}
+sapply(modelos, function(x) R2(predict(x,datos_test), datos_test$sale_price))
+```
+
+El modelo 2 es el que menos sobreajuste tiene, con una buena predicción para el número de hojas que posee, ya que 27 hojas lo consideramos como una buena cantidad a la hora de seleccionar el modelo para la poda.
+
+#### PODA DEL MODELO 2
+
+```{r}
+modelo2$cptable
+```
+
+```{r}
+plotcp(modelo2, las=2)
+lines(modelo2$cptable[,3],col="red", type = "b")
+```
+
+El gráfico muestra en el eje superior el tamaño de árbol se al que corresponden los puntos. Los valores de cp mostrados en el gráfico son intermedios de los de la tabla anterior. Se puede observar en general un sobreajuste bastante moderado, ya que la línea roja no se encuentra muy alejada de la negra. El tamaño óptimo del árbol podría ser el de 10 puesto que parece ser el primer valor situado por debajo de la línea horizontal.
+
+```{r}
+modelo2podado <- prune(modelo2, cp = 0.0079)
+rpart.plot(modelo2podado, nn=TRUE, tweak=1.2, digits=3)
+```
+
+Como resultado, el modelo podado tiene 10 hojas, con una profundidad de 4. El nodo 8 es el que tiene la media más baja y corresponde a los coches con carrocería hatchback o sedan cuyo año de fabricación es inferior a 2011. Y el nodo con media más alta es el 15, dibujado en azul oscuro, que representa un 3.4% de los datos y representa a los coche con una carrocería diferente a la ya mencionada, una casa diferente a Ford, Honda, Nissan, Otros y Renault y un año de fabricación inferior a 2014.
+
+```{r}
+plot(as.party(modelo2podado), gp = gpar(fontsize = 6))
+```
+
+En este gráfico se nos muestra una representación mas exahustiva del árbol ya que nos añade información a través de los boxplots sobre cómo se distribuyen las observaciones de cada hoja. Con esto, sabremos que nuestra predicción es fiable cuanta menor variabilidad/dispersión tengamos, es decir, cuanto más estrecha sea la caja, más cortos los bigotes, menos outliers (o que estén muy cercanos a los extremos de los bigotes), etc.
+
+Con esta información podemos ver que la hoja con mejores predicciones es en la que estimamos el menor número de precios de coche (la hoja más a la izquierda), porque como explicábamos anteriormente, tiene la caja más estrecha de todas y además sus outliers están muy agrupados cerca de los bigotes.
+
+Sin embargo, la hoja con peores predicciones es en la que predecíamos el mayor número de visitantes, que era de 2133 personas (la hoja que se encuentra más a la derecha) puesto que en este caso ocurre todo lo contrario, su caja es muy amplia y tienen un mayor rango de datos lo que da lugar a mayor posibilidad de fallo a la hora de predecir (los bigotes van desde 1000 hasta 3500 aprox, esto implica que hemos hecho la media de un rango de valores más amplio y por ello es más probable que pueda ocurrir que vayan, por ejemplo, 1200 o 3000 visitantes y nosotros hayamos dicho 2133).
+
+En cambio, en el caso anterior los valores van desde 500 hasta 1900 aprox, los datos están más "comprimidos" y la media que hacemos es de un rango de datos menor y hay más probabilidad de acertar.
+
+```{r}
+R2(predict(modelo2podado,datos_train), datos_train$sale_price)
+```
+
+```{r}
+R2(predict(modelo2podado,datos_test), datos_test$sale_price)
+```
+
+Hay una diferencia de 2,9 puntos porcentuales, entre el R2 de train y test, por lo que tiene un bajo sobreajuste. En comparación con el modelo sin podar, han bajado levemente ambas métricas.
+
+#### IMPORTANCIA DE VARIABLES
+
+```{r}
+modelo2podado$variable.importance
+```
+
+```{r}
+barplot(modelo2podado$variable.importance/sum(modelo2podado$variable.importance), las=2)
+```
+
+La variable que ha mostrado ser más importante para el modelo ha sido el tipo de carrocería del coche a la hora de predecir los precios, siendo el 50% de información del modelo, el siguiente más importante es el año de fabricación del coche con una diferencia de 20 puntos porcentuales.
+
+
+### BOOSTING - GRADIENT BOOSTING
+
+En este apartado vamos a hacer el modelo Gradient Boosting, que junto a los Adaboost son modelos que construyen árboles de manera secuencial. De esta manera, se captura nueva información en cada iteración, mientras que en Random Forest se contruían forma independiente.
+
+Como *Adaboost* es para predecir variables cualitativas, no podremos emplearlo en nuestro trabajo, ya que la variable dependiente (`sale_price`) es cuantitativa continua.
+
+```{r}
+library(caret)
+library(gbm)
+library(pROC)
+library(dplyr)
+library(adabag)
+library(rpart.plot)
+library(iml)
+library(purrr)
+library(furrr)
+library(ggplot2)
+# Dado que la validación cruzada puede aprovechar los beneficios de la
+# paralelización, lo ponemos (si da problemas en tu ordenador, puedes obviarlo)
+library(doParallel)
+cluster <- makeCluster(detectCores() - 1)
+registerDoParallel(cluster)
+```
+
+Como hemos mencionado anteriormente, haremos un modelo Gradient Boosting (GBM) para minimizar la función $SSE = \sum(y-\hat{y})^2$. la media es con M
+
+Como no tenemos $\beta$, para llegar al óptimo haremos un primer árbol y a partir de ahí buscaremos acercarnos a ese mínimo haciendo árboles secuenciales de forma que vaya disminuyendo ese error (cada árbol minimizará el error del anterior árbol, buscando las características que hacen que los árboles anteriores no funcionen bien).
+
+```{r}
+set.seed(12345)
+datos_train_reord <- datos_train[sample(nrow(datos_train)),]
+```
+
+```{r}
+# modelo con 5% de tamaño mínimo de la hoja 
+set.seed(12345)
+gbm5 <- gbm(
+  formula = sale_price ~ ., data=datos_train_reord,
+  distribution = "gaussian",
+  # para indicar que es regresión
+  train.fraction = 0.75,
+  n.trees = 5000,
+  shrinkage = 0.2,
+  bag.fraction = 1,
+  interaction.depth = 3,
+  # cada árbol como maximo 
+  n.minobsinnode = ceiling(0.05*nrow(datos_train_reord))
+)
+
+print(gbm5)
+```
+
+Utilizando la función `gbm()` se ha construido un modelo Gradient Boosting para regresión con 5000 árboles. La validación cruzada ha indicado que serían necesarios 3547 árboles y se han utilizado 14 predictoras.
+
+Para ello, hemos afinado los siguientes parámetros:
+
+-   Hemos utilizado 5000 árboles pero vamos a buscar un número óptimo menor que implique un equilibrio entre un error mínimo y una gran capacidad predictiva. Para ello, graficaremos a continuación el SSE.
+
+-   Tasa de aprendizaje ($\alpha$) es el tamaño de los escalones con los que nos vamos acercando al valor óptimo, toma valores entre 0 y 1, nosotros hemos escogido 0.2
+
+-   En cuanto a los parámetros asociados al tamaño de los árboles, hemos establecido un tamaño mínimo de hoja del 5% 
+
+```{r}
+opt_gbm5<-gbm.perf(gbm5)
+abline(h=gbm5$valid.error[opt_gbm5], lty=2, col="darkgray")
+```
+
+Con esta gráfica representamos la evolución del SSE en entrenamiento (línea negra) y en validación cruzada (línea roja), la línea vertical azul nos muestra donde se minimiza el error. Como hemos comentado previamente, la línea azul se encuentra en 3547 que es un número demasiado alto.
+
+A medida que aumenta el número de árboles, el error disminuye más rápido en entrenamiento que en validación cruzada. Observamos que la línea roja se estabiliza bastante a partir de los 1500 árboles. Por tanto, creeemos que no empeora la calidad predictiva del modelo a partir de dicho punto y así evitamos el sobreajuste que aparece con más iteraciones. Además, cuantos menos árboles utilicemos, el proceso iterativo será más rápido y tendrá menor coste computacional.
+
+
+```{r}
+# creamos la rejilla
+hyper_grid <- expand.grid(
+  shrinkage = c(0.3, 0.1, 0.005), #tasa de aprenzdizaje normalmente se mueve entre 0.3 y 0.01
+  interaction.depth = c(3, 6, 9),
+  n.minobsinnode = c(ceiling(0.01*nrow(datos_train)), ceiling(0.02*nrow(datos_train)), ceiling(0.05*nrow(datos_train))))
+```
+
+```{r}
+future::plan(sequential)   # apagar cualquier plan previo
+gc()                       # liberar memoria
+
+future::plan(multisession, workers = parallel::detectCores() - 1)
+```
+
+```{r}
+future::plan(multisession, workers=detectCores() - 1)
+set.seed(12345)
+tunningGB<- future_map(1:nrow(hyper_grid),
+                         ~ {set.seed(12345);
+                            gbm(formula = sale_price~., data=datos_train_reord,
+                              distribution = "gaussian",
+                              train.fraction = 0.75,
+                              n.trees = 4000,
+                              shrinkage = hyper_grid$shrinkage[.x],
+                              bag.fraction = 1,
+                              interaction.depth = hyper_grid$interaction.depth[.x],
+                              n.minobsinnode = hyper_grid$n.minobsinnode[.x]
+                              )}
+                       )
+plan(sequential)
+```
+
+```{r}
+resultado <- map_df(1:nrow(hyper_grid),
+                    ~{data.frame(
+                        shrinkage = as.factor(hyper_grid$shrinkage[.x]),
+                        interaction.depth = as.factor(hyper_grid$interaction.depth[.x]),
+                        n.minobsinnode = as.factor(hyper_grid$n.minobsinnode[.x]),
+                        ntrees = 1:4000,
+                        R2 = 1-tunningGB[[.x]]$valid.error/var(datos_train_reord$sale_price)
+                      )
+                    }
+)
+
+ggplot(data=resultado, aes(x=ntrees, y=R2, col=shrinkage))+
+  geom_line(lwd=1.1)+
+  geom_hline(yintercept = max(resultado$R2))+
+  facet_grid(interaction.depth ~ n.minobsinnode)
+```
+
+```{r}
+resultado |> 
+     group_by(interaction.depth, n.minobsinnode, shrinkage) |> 
+     slice_max(R2, n = 1) |> 
+     arrange(desc(R2))
+```
+
+Si observamos el gráfico con las 27 combinaciones, vemos que a mayor tamaño mínimo de hoja, obtenemos peores resultados. La línea azul corresponde a los árboles con una menor tasa de aprendizaje (0.005) y es la que más se aleja del $R^2$ máximo en todos los casos. Los resultados son bastante buenos ya que muchas de las líneas alcanzan la línea horizontal negra que indica el máximo $R^2$.
+
+Para tomar una decisión, miramos la tabla y buscaremos aquel modelo con mayor calidad predictiva y menor número de árboles posible. En nuestro caso, optamos por la combinación de 167 árboles, una tasa de aprendizaje de 0.3, profundidad de 9 y un tamaño mínimo de hoja del 1%. Este modelo alcanza un $R^2$ de 0.8343, siendo el máximo de 0.8377 aprox.
+
+```{r}
+optComb<-which((hyper_grid$shrinkage==0.3)&(hyper_grid$interaction.depth==9)&(hyper_grid$n.minobsinnode==55))
+print(tunningGB[[optComb]])
+```
+
+
+```{r}
+opt_gbm<-gbm.perf(tunningGB[[optComb]])
+abline(h=tunningGB[[optComb]]$valid.error[opt_gbm], lty=2, col="gray")
+```
+
+Como podemos observar gráficamente, con 167 árboles alcanzamos el punto óptimo donde se minimiza el error y obtenemos una buena calidad predictiva. Además, es una buena opción para reducir de sobreajuste.
+
+```{r}
+set.seed(12345)
+gbm_opt<- gbm(
+  formula = sale_price~., data=datos_train,
+  distribution = "gaussian",
+  train.fraction = 1,
+  n.trees = 167,
+  shrinkage = 0.3,
+  bag.fraction = 1,
+  interaction.depth = 9,
+  n.minobsinnode = 55
+)
+
+print(gbm_opt)
+```
+Para evaluar el modelo de regresión, utilizaremos el $R^2$ en entrenamiento y prueba:
+
+```{r}
+R2(predict(gbm_opt,datos_train), datos_train$sale_price)
+```
+
+```{r}
+R2(predict(gbm_opt,datos_test), datos_test$sale_price)
+```
+A diferencia de los otros modelos, hemos obtenido una calidad predictiva bastante buena, con un $R^2$ del 0.86%. Observamos que hay un ligero sobreajuste, pero no indica una gran falta de estabilidad en nuestro último modelo.
+
+Por último, haremos un análisis de las variables que forman parte del modelo Gradient Boosting. Primero, haremos un ranking de variables:
+
+```{r}
+summary(gbm_opt, las=2, cex.names=.6)
+```
+
+La variable más importante es el tipo de carrocería del coche con un 40% de información, seguida por el año de fabricación del coche. 
+
