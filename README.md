@@ -48,8 +48,8 @@ Tras evaluar las métricas de rendimiento en los conjuntos de entrenamiento (Tra
 **Conclusión de negocio:** A medida que aumenta el año de fabricación (vehículos más nuevos), el valor medio predicho aumenta de forma consistente en todos los tipos de carrocería. El modelo *Gradient Boosting* es el candidato ideal para ser desplegado en el concesionario, puesto que, además de ser el que obtiene mejores resultados en cuanto a capacidad predictiva, la complejidad que escode este tipo de modelo de Matching Learning nos permite ajustarnos mejor a esta clase de toma de decisiones.
 
 ### 🚀 Cómo ejecutar este proyecto
-1. Clona este repositorio: `git clone https://github.com/tu-usuario/nombre-del-repo.git`
-2. Abre el script principal en **RStudio**.
+1. Clona este repositorio: `git clone https://github.com/laulop27/prediccion-precios-coches.git`
+2. Abre el script principal **TRABAJOgrupal.qmd** en **RStudio**.
 3. Asegúrate de tener instaladas las librerías necesarias (ej. `randomForest`, `gbm`, `rpart`, `ggplot2`).
 4. Ejecuta el código paso a paso para reproducir la limpieza de datos y el entrenamiento de los modelos.
 
