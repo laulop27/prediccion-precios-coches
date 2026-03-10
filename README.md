@@ -21,11 +21,11 @@ The project includes:
 📊 The best-performing model achieved an **R² score of 0.8621 on the test dataset**.
 
 ### 🗂️ El Dataset
-Utilizamos el conjunto de datos `car_price.csv`, que contiene alrededor de 7.400 registros de vehículos usados y 18 columnas. Algunas de las variables clave analizadas incluyen:
-* `yr_mfr`: Año de fabricación.
-* `kms_run`: Kilómetros recorridos.
-* `body_type` y `fuel_type`: Tipo de carrocería y combustible.
-* `sale_price`: Nuestra variable objetivo (Target).
+We used the `car_price.csv` dataset, which contains around 7,400 records of used vehicles and 18 columns. Some of the key variables analyzed include:
+* `yr_mfr`: Year of manufacture.
+* `kms_run`: Kilometers driven.
+* `body_type` and `fuel_type`: Body type and fuel type.
+* `sale_price`: Our target variable.
 
 ### 🔄 Project Workflow
 
@@ -56,12 +56,12 @@ Utilizamos el conjunto de datos `car_price.csv`, que contiene alrededor de 7.400
 
 
 ### 📊 Principal Results
-Tras evaluar las métricas de rendimiento en los conjuntos de entrenamiento (Train) y prueba (Test), los modelos de ensamblaje (Ensembles) demostraron una clara superioridad:
+After evaluating the performance metrics on the training and test sets, the ensemble models demonstrated clear superiority:
 
 * **Regresión StepBIC:**
   - $R^2$ Train = 0.7034 
-  - $R^2$ Test = **0.7044** (Sin sobreajuste, pero bajo poder predictivo).
-* **Modelo penalizado (ENET):** Seleccionamos un modelo LASSO.
+  - $R^2$ Test = **0.7044** (No overfitting, but low predictive power).
+* **Penalized model: (ENET-LASSO):** 
   - $R^2$ Train = 0.6850
   - $R^2$ Test = **0.6796**
 * **Árbol Podado:**
