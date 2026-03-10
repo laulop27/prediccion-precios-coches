@@ -18,7 +18,7 @@ The project includes:
 - Model training and comparison
 - Model evaluation
 
-📊 The best-performing model achieved an **R² score of 0.8621 on the test dataset**.
+➢ The best-performing model achieved an **R² score of 0.8621 on the test dataset**.
 
 ### 🗂️ El Dataset
 We used the `car_price.csv` dataset, which contains around 7,400 records of used vehicles and 18 columns. Some of the key variables analyzed include:
