@@ -1,12 +1,24 @@
 ## 🚗 Predicción de Precios de Coches de Segunda Mano
 
-![R](https://img.shields.io/badge/R-%23276DC3.svg?style=for-the-badge&logo=r&logoColor=white)
-![Machine Learning](https://img.shields.io/badge/Machine%20Learning-Supervisado-orange?style=for-the-badge)
+<p align="center">
+  <img src="https://readme-typing-svg.herokuapp.com/?lines=Machine+Learning+with+R&center=true&width=850&height=45" alt="Typing SVG">
+</p>
 
-### 📌 Descripción del Proyecto
-Este proyecto tiene como objetivo desarrollar una **herramienta de apoyo a la toma de decisiones para concesionarios**. A través del análisis de datos y la aplicación de algoritmos de Machine Learning, estimamos el precio de mercado de vehículos de segunda mano en India. 
+### 📌 Project Overview
 
-El modelo permite a los negocios automovilísticos ajustar sus precios de compra y venta basándose en características objetivas del vehículo.
+This project aims to build a **machine learning model to predict the price of second-hand vehicles** using a real dataset from the Indian market.
+
+The goal is to develop a **decision-support tool for car dealerships**, helping them estimate fair market prices based on vehicle characteristics.
+
+The project includes:
+
+- Data cleaning and preprocessing
+- Exploratory Data Analysis (EDA)
+- Feature engineering
+- Model training and comparison
+- Model evaluation
+
+📊 The best-performing model achieved an **R² score of 0.8621 on the test dataset**.
 
 ### 🗂️ El Dataset
 Utilizamos el conjunto de datos `car_price.csv`, que contiene alrededor de 7.400 registros de vehículos usados y 18 columnas. Algunas de las variables clave analizadas incluyen:
@@ -15,17 +27,35 @@ Utilizamos el conjunto de datos `car_price.csv`, que contiene alrededor de 7.400
 * `body_type` y `fuel_type`: Tipo de carrocería y combustible.
 * `sale_price`: Nuestra variable objetivo (Target).
 
-### 🧠 Modelos y Metodología
-El proyecto se desarrolló en **R** siguiendo estas fases:
-1. **Depuración y EDA (Análisis Exploratorio de Datos):** Limpieza de valores nulos, recodificación de variables categóricas y análisis de correlaciones.
-2. **Entrenamiento de Modelos:** Se probaron y compararon varios algoritmos de aprendizaje supervisado:
-   * Regresión Lineal (StepBIC)
-   * Árboles de Decisión (Podados)
-   * Random Forest
-   * Gradient Boosting
+### 🔄 Project Workflow
+
+1. **Data Cleaning**
+   - Handling missing values
+   - Removing inconsistencies
+   - Formatting variables
+
+2. **Exploratory Data Analysis**
+   - Distribution analysis
+   - Correlation analysis
+   - Visualization of key features
+
+3. **Feature Engineering**
+   - Encoding categorical variables
+   - Feature selection
+
+4. **Model Training**
+   - StepBIC Regression
+   - Decision Trees
+   - Random Forest
+   - Gradient Boosting
+
+5. **Model Evaluation**
+   - R²
+   - RMSE
+   - Cross-validation
 
 
-### 📊 Resultados Principales
+### 📊 Principal Results
 Tras evaluar las métricas de rendimiento en los conjuntos de entrenamiento (Train) y prueba (Test), los modelos de ensamblaje (Ensembles) demostraron una clara superioridad:
 
 * **Regresión StepBIC:**
@@ -40,18 +70,11 @@ Tras evaluar las métricas de rendimiento en los conjuntos de entrenamiento (Tra
 * **Random Forest:**
   - $R^2$ Train = 0.9066 
   - $R^2$ Test = **0.8475** 
-* **🏆Gradient Boosting:** (Mejor equilibrio. Logra capturar la complejidad de los datos con un sobreajuste mínimo de solo 0.05 puntos respecto a train).
+* **🏆Gradient Boosting:** (Achieved best results, providing strong predictive performance without significant overfitting).
   - $R^2$ Train = 0.9150
   - $R^2$ Test = **0.8621**
 
-
-**Conclusión de negocio:** A medida que aumenta el año de fabricación (vehículos más nuevos), el valor medio predicho aumenta de forma consistente en todos los tipos de carrocería. El modelo *Gradient Boosting* es el candidato ideal para ser desplegado en el concesionario, puesto que, además de ser el que obtiene mejores resultados en cuanto a capacidad predictiva, la complejidad que escode este tipo de modelo de Matching Learning nos permite ajustarnos mejor a esta clase de toma de decisiones.
-
-### 🚀 Cómo ejecutar este proyecto
-1. Clona este repositorio: `git clone https://github.com/laulop27/prediccion-precios-coches.git`
-2. Abre el script principal **TRABAJOgrupal.qmd** en **RStudio**.
-3. Asegúrate de tener instaladas las librerías necesarias (ej. `randomForest`, `gbm`, `rpart`, `ggplot2`).
-4. Ejecuta el código paso a paso para reproducir la limpieza de datos y el entrenamiento de los modelos.
+> **Business Conclusion:** As the manufacturing year increases (newer vehicles), the average predicted value consistently rises across all body types. The *Gradient Boosting* model is the ideal candidate for deployment at the dealership. Besides achieving the best results in terms of predictive performance, the underlying complexity of this type of Machine Learning model allows for better adaptation to this kind of decision-making process.
 
 ---
-*Trabajo realizado por: Marcos Martínez, Laura López, Marina Parra, Verónica Yebra y Rodrigo Castillo.*
+*Work done by: Marcos Martínez, Laura López, Marina Parra, Verónica Yebra y Rodrigo Castillo.*
